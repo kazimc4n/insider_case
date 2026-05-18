@@ -1,3 +1,3 @@
 module github.com/kazimc4n/insider_case
 
-go 1.22.2
+go 1.24
