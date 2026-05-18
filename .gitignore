@@ -13,3 +13,6 @@ vendor/
 # IDE
 .vscode/
 .idea/
+
+# Python virtual environment
+.venv/
