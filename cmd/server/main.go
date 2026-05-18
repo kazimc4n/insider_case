@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,18 @@ import (
 )
 
 func main() {
+
+	healthcheck := flag.Bool("healthcheck", false, "run healthcheck and exit")
+	flag.Parse()
+
+	if *healthcheck {
+		resp, err := http.Get("http://localhost:8080/healthz")
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+	
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
