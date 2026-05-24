@@ -1,9 +1,9 @@
 package handler_test
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/kazimc4n/insider_case/internal/handler"
@@ -11,36 +11,42 @@ import (
 
 func TestPing(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
-	w := httptest.NewRecorder()
+	rr := httptest.NewRecorder()
 
-	handler.Ping(w, req)
+	handler.Ping(rr, req)
 
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200, got %d", resp.StatusCode)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
 	}
-
-	var body map[string]string
-	json.NewDecoder(resp.Body).Decode(&body)
-	if body["message"] != "pong" {
-		t.Errorf("expected pong, got %s", body["message"])
+	if !strings.Contains(rr.Body.String(), "pong") {
+		t.Fatalf("expected pong in body, got %s", rr.Body.String())
 	}
 }
 
 func TestHealthz(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
-	w := httptest.NewRecorder()
+	rr := httptest.NewRecorder()
 
-	handler.Healthz(w, req)
+	handler.Healthz(rr, req)
 
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200, got %d", resp.StatusCode)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
 	}
+	if !strings.Contains(rr.Body.String(), "ok") {
+		t.Fatalf("expected ok in body, got %s", rr.Body.String())
+	}
+}
 
-	var body map[string]string
-	json.NewDecoder(resp.Body).Decode(&body)
-	if body["status"] != "ok" {
-		t.Errorf("expected ok, got %s", body["status"])
+func TestVersion(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/version", nil)
+	rr := httptest.NewRecorder()
+
+	handler.MakeVersion("test-sha")(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "test-sha") {
+		t.Fatalf("expected test-sha in body, got %s", rr.Body.String())
 	}
 }
