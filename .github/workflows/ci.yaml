@@ -122,3 +122,25 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    name: Deploy to minikube
+    runs-on: [self-hosted, linux]
+    needs: build-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Set image on minikube deployment
+        run: |
+          kubectl set image deployment/insider-case \
+            insider-case=ghcr.io/${{ github.repository }}:sha-${{ github.sha }} \
+            --record
+
+      - name: Wait for rollout
+        run: kubectl rollout status deployment/insider-case --timeout=120s
+
+      - name: Verify deployment
+        run: |
+          echo "--- Deployment status ---"
+          kubectl get deployment insider-case -o wide
+          echo "--- Pod status ---"
+          kubectl get pods -l app.kubernetes.io/name=insider-case
