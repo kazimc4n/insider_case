@@ -8,65 +8,102 @@ on:
 
 permissions:
   contents: read
-  id-token: write
   packages: write
 
 jobs:
-  build:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # OIDC ile AWS credentials al
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          go-version-file: go.mod
+          cache: true
 
-      # AWS'a erişebildiğini test et
-      - name: Verify AWS access
-        run: |
-          echo "✓ AWS identity:"
-          aws sts get-caller-identity
-          
-          echo ""
-          echo "✓ EC2 instances:"
-          aws ec2 describe-instances --query 'Reservations[].Instances[].InstanceId' --output table
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
 
-      # Lint (seçimli)
-      - name: Lint code
-        run: |
-          if [ -f .eslintrc ] || [ -f .flake8 ]; then
-            echo "Running linter..."
-          fi
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      # Test
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
       - name: Run tests
-        run: |
-          npm test 2>/dev/null || python -m pytest 2>/dev/null || echo "No tests found"
+        run: go test ./... -v -race
 
-      # Build image
+  build-push:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ github.sha }}
 
-  scan-secrets:
+  trivy:
+    name: Trivy — image scan
+    runs-on: ubuntu-latest
+    needs: build-push
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+  gitleaks:
+    name: Gitleaks — secret scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
