@@ -7,18 +7,23 @@ import (
 
 func Ping(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "pong"})
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": "pong"}); err != nil {
+		http.Error(w, "encoding error", http.StatusInternalServerError)
+	}
 }
 
 func Healthz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
+		http.Error(w, "encoding error", http.StatusInternalServerError)
+	}
 }
 
-// MakeVersion returns a handler closed over the build-time version string.
 func MakeVersion(version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"version": version})
+		if err := json.NewEncoder(w).Encode(map[string]string{"version": version}); err != nil {
+			http.Error(w, "encoding error", http.StatusInternalServerError)
+		}
 	}
 }
