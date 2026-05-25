@@ -12,6 +12,7 @@ A lightweight HTTP microservice built with Go, containerised with a distroless D
 - [Quick Start](#quick-start)
 - [Running Locally](#running-locally)
 - [Deploy to Minikube](#deploy-to-minikube)
+- [Observability](#observability)
 - [Environment Variables](#environment-variables)
 - [Architecture Overview](#architecture-overview)
 - [Tool Choices](#tool-choices)
@@ -100,6 +101,55 @@ helm rollback insider-case <revision>
 
 # Confirm rollout status
 kubectl rollout status deployment/insider-case
+```
+
+---
+
+## Observability
+
+Prometheus metrics are exposed at `/metrics` (`http_requests_total`, `http_request_duration_seconds`). The stack below is optional but matches the case study observability requirements.
+
+### Install kube-prometheus-stack
+
+```bash
+# Prometheus Operator, Prometheus, Grafana, Alertmanager
+make monitoring-install
+
+# Redeploy app so ServiceMonitor is applied
+make deploy-dev
+```
+
+### Grafana dashboard
+
+A custom dashboard **insider-case** is loaded via the Grafana sidecar and includes:
+
+- Requests per second (RPS)
+- Request latency (p50 / p95)
+- HTTP 5xx error rate
+- Pod restarts (`kube_pod_container_status_restarts_total`)
+
+```bash
+make grafana
+# → http://127.0.0.1:3000  (admin / password printed by make grafana)
+```
+
+Open **Dashboards → insider-case**.
+
+### Alert rule
+
+`monitoring/prometheus-rules.yaml` defines **HighHTTPErrorRate**: the ratio of 5xx responses to all requests exceeds 5% for 2 minutes.
+
+```bash
+# Inspect loaded rules in Prometheus UI
+kubectl port-forward -n monitoring svc/kube-prometheus-kube-prome-prometheus 9090:9090
+# → http://127.0.0.1:9090/alerts
+```
+
+### Generate sample traffic
+
+```bash
+kubectl port-forward svc/insider-case 8080:80 &
+while true; do curl -s http://localhost:8080/ping > /dev/null; sleep 0.2; done
 ```
 
 ---

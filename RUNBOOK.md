@@ -133,7 +133,36 @@ curl http://localhost:8080/healthz
 
 ---
 
-## 5. Useful Diagnostic Commands
+## 5. Observability
+
+### Grafana
+
+```bash
+make grafana
+# Default credentials: admin / changeme (see monitoring/kube-prometheus-stack-values.yaml)
+```
+
+Dashboard **insider-case** covers RPS, latency, 5xx error rate, and pod restarts.
+
+### Prometheus alerts
+
+Alert **HighHTTPErrorRate** fires when more than 5% of requests return 5xx over 5 minutes (for 2 minutes).
+
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-kube-prome-prometheus 9090:9090
+# Check http://127.0.0.1:9090/alerts
+```
+
+### Reinstall monitoring stack
+
+```bash
+make monitoring-uninstall
+make monitoring-install
+```
+
+---
+
+## 6. Useful Diagnostic Commands
 
 ```bash
 # Pod status overview

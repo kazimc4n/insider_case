@@ -21,3 +21,10 @@ resources:
 env:
   PORT: "8080"
   GIT_SHA: "dev"
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    labels:
+      release: kube-prometheus

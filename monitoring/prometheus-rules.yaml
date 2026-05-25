@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: insider-case-alerts
+  labels:
+    release: kube-prometheus
+    app.kubernetes.io/name: insider-case
+spec:
+  groups:
+    - name: insider-case
+      interval: 30s
+      rules:
+        - alert: HighHTTPErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total[5m]))
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: HTTP 5xx error rate above 5%
+            description: >-
+              More than 5% of HTTP requests returned 5xx status codes over the
+              last 5 minutes (current value: {{ $value | humanizePercentage }}).
