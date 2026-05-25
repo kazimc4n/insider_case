@@ -1,5 +1,6 @@
 # binaries
 server
+bin/
 *.exe
 
 # env
@@ -10,9 +11,18 @@ server
 *.out
 vendor/
 
+# Kubernetes
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+
 # IDE
 .vscode/
 .idea/
 
 # Python virtual environment
 .venv/
+
+# OS
+.DS_Store
+Thumbs.db
