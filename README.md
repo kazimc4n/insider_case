@@ -6,7 +6,7 @@ Insider One DevOps internship case — small Go HTTP service, Docker, Helm on mi
 
 ## Prerequisites
 
-Go 1.26+, Docker, minikube, kubectl, Helm 3, cloudflared, Make.
+Go 1.24+, Docker, minikube, kubectl, Helm 3, cloudflared, Make.
 
 ## Quick start (Track B)
 
@@ -64,7 +64,7 @@ See [`.env.example`](.env.example).
 
 ## CI/CD
 
-On push/PR to `main`: golangci-lint, tests, image build to GHCR (`sha-<commit>`), Trivy (CRITICAL/HIGH fails build), gitleaks.
+On push/PR to `main`: golangci-lint, tests, image build to GHCR (`sha-<commit>`), Trivy scan, gitleaks.
 
 Merge to `main` deploys via self-hosted runner: `kubectl set image` on minikube.
 
