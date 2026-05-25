@@ -17,8 +17,10 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: ghcr-secret
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

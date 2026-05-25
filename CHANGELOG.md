@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Track B automation: `scripts/track-b-setup.sh`, `scripts/track-b-teardown.sh`, Makefile targets
+- kube-prometheus-stack values, Grafana dashboard, PrometheusRule (HighHTTPErrorRate)
+- ServiceMonitor for application metrics
+- Architecture diagram (`docs/architecture/diagram.md`)
+
+### Changed
+- Prometheus `http_requests_total` includes `status` label for error-rate alerts
+- Dev deploy: optional `imagePullSecrets` (empty for local `minikube image load`)
+
+### Removed
+- Accidentally committed `insider_case_server` binary from repository
+
 ## [0.1.0] - 2026-05-24
 
 ### Added

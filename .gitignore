@@ -1,5 +1,6 @@
 # binaries
 server
+insider_case_server
 bin/
 *.exe
 

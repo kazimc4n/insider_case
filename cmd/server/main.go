@@ -31,7 +31,7 @@ func main() {
 	// Add prometheus metrics endpoint
 	mux.Handle("/metrics", promhttp.Handler())
 
-	// Apply middleware: first logger, then metrics
+	// Metrics inner (records status); RequestLogger outer (structured logs)
 	h := middleware.RequestLogger(middleware.Metrics(mux))
 
 	slog.Info("Server starting", slog.String("port", port))

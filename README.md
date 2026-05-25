@@ -36,11 +36,24 @@ A lightweight HTTP microservice built with Go, containerised with a distroless D
 
 ---
 
-## Quick Start
+## Quick Start (Track B)
 
 ```bash
-# One-command bootstrap (starts minikube, deploys chart, opens tunnel)
-make setup
+# Reproducible bootstrap: minikube + image build/load + Helm deploy + health check
+make track-b-setup
+
+# Same as above, plus kube-prometheus-stack (Grafana / alerts)
+make track-b-setup-full
+
+# Public URL (after setup)
+make tunnel
+```
+
+Equivalent shell script:
+
+```bash
+./scripts/track-b-setup.sh
+./scripts/track-b-setup.sh --with-monitoring
 ```
 
 ---
@@ -71,23 +84,37 @@ curl http://localhost:8080/version   # {"version":"dev"}
 
 ---
 
-## Deploy to Minikube
+## Deploy to Minikube (Track B)
+
+Track B automation lives in the **Makefile** and **`scripts/`** directory so a fresh machine can reproduce the same cluster and deployment.
+
+| Target | Description |
+|--------|-------------|
+| `make check-tools` | Verify minikube, kubectl, helm, docker are installed |
+| `make track-b-setup` | Start minikube, build/load image, `helm upgrade`, verify `/healthz` |
+| `make track-b-setup-full` | `track-b-setup` + `kube-prometheus-stack` |
+| `make track-b-teardown` | Uninstall Helm releases (keeps minikube) |
+| `make track-b-teardown-all` | Teardown + `minikube delete` |
+| `make minikube-start` | Start cluster only (4 CPU / 6 GiB defaults) |
+| `make load-image` | `docker build` + `minikube image load` |
+| `make deploy-dev` | Deploy dev values overlay |
+| `make verify` | Rollout status + pods/svc |
+| `make port-forward` | Local access on `:8080` |
+| `make tunnel` | cloudflared → NodePort |
 
 ```bash
-# Start cluster
+# Step-by-step (instead of one-shot setup)
 make minikube-start
-
-# Deploy dev environment
+make load-image
 make deploy-dev
+make verify
+make port-forward   # http://localhost:8080/ping
+```
 
-# Deploy prod environment
-make deploy-prod
+Environment overrides (optional):
 
-# Access via port-forward
-kubectl port-forward svc/insider-case 8080:80
-
-# Or expose via cloudflared tunnel
-make tunnel
+```bash
+MINIKUBE_CPUS=2 MINIKUBE_MEMORY=4096 MINIKUBE_DRIVER=docker make track-b-setup
 ```
 
 ### Rollback
@@ -238,7 +265,7 @@ For the full component diagram see: [`docs/architecture/diagram.md`](docs/archit
 - Installed `kube-prometheus-stack` on minikube
 - Created Grafana dashboard showing RPS, latency, error rate
 - Wrote RUNBOOK.md, SECURITY.md, and 3 ADRs
-- Extended Makefile with `minikube-start`, `tunnel`, and `setup` targets
+- Track B reproducible setup (`scripts/`, `make track-b-setup`, `make track-b-setup-full`)
 
 ---
 

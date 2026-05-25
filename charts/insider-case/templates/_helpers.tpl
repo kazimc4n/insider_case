@@ -49,14 +49,3 @@ Selector labels
 app.kubernetes.io/name: {{ include "insider-case.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
-
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "insider-case.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "insider-case.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}

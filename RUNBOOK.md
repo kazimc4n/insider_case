@@ -2,6 +2,17 @@
 
 Operational procedures for the `insider-case` HTTP service running on minikube (Track B).
 
+### Reproducible environment
+
+```bash
+make track-b-setup          # minikube + app
+make track-b-setup-full     # + monitoring
+make track-b-teardown       # remove Helm releases
+make track-b-teardown-all   # + delete minikube cluster
+```
+
+Shell equivalents: `scripts/track-b-setup.sh`, `scripts/track-b-teardown.sh`.
+
 ---
 
 ## 1. Restart Procedures

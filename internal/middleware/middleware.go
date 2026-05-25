@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
@@ -12,10 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
-
-type contextKey string
-
-const requestIDKey contextKey = "requestID"
 
 var (
 	httpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -45,9 +40,6 @@ func RequestLogger(next http.Handler) http.Handler {
 		if reqID == "" {
 			reqID = generateRequestID()
 		}
-
-		ctx := context.WithValue(r.Context(), requestIDKey, reqID)
-		r = r.WithContext(ctx)
 
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rw, r)

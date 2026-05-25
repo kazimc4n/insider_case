@@ -3,6 +3,9 @@ replicaCount: 1
 image:
   tag: dev
 
+# Local minikube uses `minikube image load`; no GHCR pull secret required.
+imagePullSecrets: []
+
 resources:
   requests:
     cpu: 50m
