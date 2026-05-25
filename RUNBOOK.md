@@ -1,194 +1,61 @@
-# Runbook — insider-case
+# Runbook
 
-Operational procedures for the `insider-case` HTTP service running on minikube (Track B).
+Track B (minikube). Bootstrap: `make track-b-setup` / teardown: `make track-b-teardown`.
 
-### Reproducible environment
-
-```bash
-make track-b-setup          # minikube + app
-make track-b-setup-full     # + monitoring
-make track-b-teardown       # remove Helm releases
-make track-b-teardown-all   # + delete minikube cluster
-```
-
-Shell equivalents: `scripts/track-b-setup.sh`, `scripts/track-b-teardown.sh`.
-
----
-
-## 1. Restart Procedures
-
-### Single Pod Crash (CrashLoopBackOff)
+## Restart
 
 ```bash
-# Identify the crashing pod
-kubectl get pods -l app.kubernetes.io/name=insider-case
+# one pod
+kubectl delete pod -l app.kubernetes.io/name=insider-case
 
-# Check why it crashed
-kubectl describe pod <pod-name>
-kubectl logs <pod-name> --previous
-
-# Delete the pod — the Deployment controller will recreate it
-kubectl delete pod <pod-name>
-
-# Confirm it comes back healthy
-kubectl get pods -l app.kubernetes.io/name=insider-case -w
-```
-
-### Full Service Restart
-
-```bash
-# Restart all pods in the deployment (rolling restart)
+# whole deployment
 kubectl rollout restart deployment/insider-case
-
-# Wait for rollout to complete
 kubectl rollout status deployment/insider-case --timeout=120s
 ```
 
----
-
-## 2. Rollback Procedures
-
-### Helm Rollback
+## Rollback
 
 ```bash
-# List release history
 helm history insider-case
-
-# Roll back to a specific revision (e.g. revision 2)
-helm rollback insider-case 2
-
-# Confirm the rollback completed
+helm rollback insider-case <revision>
 kubectl rollout status deployment/insider-case --timeout=120s
-
-# Verify the running image
-kubectl get deployment insider-case -o jsonpath='{.spec.template.spec.containers[0].image}'
 ```
 
-### Kubectl Rollback (emergency, without Helm)
+Emergency without Helm:
 
 ```bash
-# View deployment revision history
-kubectl rollout history deployment/insider-case
-
-# Roll back to the previous revision
 kubectl rollout undo deployment/insider-case
-
-# Or to a specific revision
-kubectl rollout undo deployment/insider-case --to-revision=3
 ```
 
----
-
-## 3. Viewing Logs
-
-### Basic Log Access
+## Logs
 
 ```bash
-# Tail logs from all pods
 kubectl logs -l app.kubernetes.io/name=insider-case --tail=100 -f
-
-# Logs from a specific pod
-kubectl logs <pod-name> --tail=200
-
-# Previous container logs (after a crash)
-kubectl logs <pod-name> --previous
+kubectl logs <pod> --previous   # after crash
 ```
 
-### Filtering by Request ID
+JSON logs include `request_id`, `method`, `path`, `status`, `duration`.
 
-Structured logs include a `request_id` field. Filter with `jq`:
+Filter with jq:
 
 ```bash
-kubectl logs -l app.kubernetes.io/name=insider-case --tail=500 | \
-  jq -r 'select(.request_id == "<target-request-id>")'
+kubectl logs -l app.kubernetes.io/name=insider-case --tail=200 | jq 'select(.level=="ERROR")'
 ```
 
-### Filtering by Log Level
-
-```bash
-kubectl logs -l app.kubernetes.io/name=insider-case --tail=500 | \
-  jq -r 'select(.level == "ERROR")'
-```
-
----
-
-## 4. Secret Rotation
-
-The application currently uses environment variables passed via Helm values. To rotate a secret without downtime:
-
-### Step 1 — Update the Helm Values
-
-Edit `values-prod.yaml` (or the relevant values file) with the new secret value.
-
-### Step 2 — Upgrade the Release
-
-```bash
-helm upgrade insider-case charts/insider-case \
-  -f charts/insider-case/values-prod.yaml
-
-# This triggers a rolling update — old pods serve traffic until new pods are ready
-kubectl rollout status deployment/insider-case --timeout=120s
-```
-
-### Step 3 — Verify
-
-```bash
-# Confirm the new pods are running
-kubectl get pods -l app.kubernetes.io/name=insider-case
-
-# Hit the health endpoint to confirm service is up
-curl http://localhost:8080/healthz
-```
-
-> **Note:** For production use, migrate from plain environment variables to Kubernetes Secrets or an external secret manager (e.g. HashiCorp Vault, Sealed Secrets). This ensures secrets are encrypted at rest and not stored in version control.
-
----
-
-## 5. Observability
-
-### Grafana
+## Observability
 
 ```bash
 make grafana
-# Default credentials: admin / changeme (see monitoring/kube-prometheus-stack-values.yaml)
+# Dashboard: insider-case
+# Alert: HighHTTPErrorRate (>5% 5xx for 2m)
 ```
 
-Dashboard **insider-case** covers RPS, latency, 5xx error rate, and pod restarts.
+Reinstall stack: `make monitoring-uninstall && make monitoring-install`.
 
-### Prometheus alerts
-
-Alert **HighHTTPErrorRate** fires when more than 5% of requests return 5xx over 5 minutes (for 2 minutes).
+## Checks
 
 ```bash
-kubectl port-forward -n monitoring svc/kube-prometheus-kube-prome-prometheus 9090:9090
-# Check http://127.0.0.1:9090/alerts
-```
-
-### Reinstall monitoring stack
-
-```bash
-make monitoring-uninstall
-make monitoring-install
-```
-
----
-
-## 6. Useful Diagnostic Commands
-
-```bash
-# Pod status overview
-kubectl get pods -l app.kubernetes.io/name=insider-case -o wide
-
-# Deployment details
+kubectl get pods,svc -l app.kubernetes.io/name=insider-case
 kubectl describe deployment insider-case
-
-# Service and endpoints
-kubectl get svc insider-case
-kubectl get endpoints insider-case
-
-# Resource usage (requires metrics-server)
-kubectl top pods -l app.kubernetes.io/name=insider-case
-
-# Events (for debugging scheduling/probe failures)
-kubectl get events --sort-by=.metadata.creationTimestamp | tail -20
+kubectl top pods -l app.kubernetes.io/name=insider-case   # needs metrics-server
 ```

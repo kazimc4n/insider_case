@@ -4,8 +4,7 @@
 	load-image verify port-forward \
 	monitoring-install monitoring-uninstall monitoring-apply-extras \
 	grafana tunnel \
-	track-b-setup track-b-setup-full track-b-teardown track-b-teardown-all \
-	setup teardown
+	track-b-setup track-b-setup-full track-b-teardown track-b-teardown-all
 
 PROMETHEUS_NS := monitoring
 PROMETHEUS_RELEASE := kube-prometheus
@@ -114,7 +113,3 @@ track-b-teardown:
 track-b-teardown-all:
 	chmod +x scripts/track-b-teardown.sh
 	./scripts/track-b-teardown.sh --delete-cluster
-
-# Aliases
-setup: track-b-setup
-teardown: track-b-teardown

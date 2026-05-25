@@ -25,45 +25,32 @@ var (
 	}, []string{"method", "path"})
 )
 
-func generateRequestID() string {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return hex.EncodeToString([]byte(time.Now().Format("20060102150405.000000000")))
-	}
-	return hex.EncodeToString(b)
-}
-
-func RequestLogger(next http.Handler) http.Handler {
+func Instrument(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		reqID := r.Header.Get("X-Request-ID")
 		if reqID == "" {
-			reqID = generateRequestID()
+			b := make([]byte, 8)
+			if _, err := rand.Read(b); err == nil {
+				reqID = hex.EncodeToString(b)
+			}
 		}
 
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rw, r)
 
 		duration := time.Since(start)
+		status := strconv.Itoa(rw.status)
+		httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, status).Inc()
+		httpRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration.Seconds())
 
-		slog.Info("Request processed",
+		slog.Info("request",
 			slog.String("request_id", reqID),
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.Path),
 			slog.Int("status", rw.status),
 			slog.Duration("duration", duration),
 		)
-	})
-}
-
-func Metrics(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(rw, r)
-		duration := time.Since(start).Seconds()
-		httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(rw.status)).Inc()
-		httpRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration)
 	})
 }
 
