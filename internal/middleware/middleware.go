@@ -31,7 +31,9 @@ var (
 
 func generateRequestID() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		return hex.EncodeToString([]byte(time.Now().Format("20060102150405.000000000")))
+	}
 	return hex.EncodeToString(b)
 }
 
