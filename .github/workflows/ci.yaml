@@ -129,6 +129,18 @@ jobs:
     needs: build-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pre-load image into minikube
+        run: |
+          docker pull ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+          minikube image load ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+
       - name: Set image on minikube deployment
         run: |
           kubectl set image deployment/insider-case \
